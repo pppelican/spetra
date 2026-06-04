@@ -46,6 +46,9 @@
             background-color: rgba(255, 255, 255, 0.5); 
             border-radius: 6px;
         }
+        .grid-board {
+            touch-action: none; /* スクロールやピンチズームを無効化 */
+        }
         
         /* タイル */
         .tile {
@@ -227,7 +230,7 @@
         <strong>【操作方法】</strong><br>
         好きな画像を８種類設定して遊べます。設定しなくてもそのまま遊べます。<br>
         トリミング機能などはないので正方形の画像を設定することをオススメします。<br>
-        操作：矢印キー（↑↓←→）、WASDキー、または画面スワイプ<br>
+        操作：矢印キー（↑ ↓ ← →）、WASDキー、または画面スワイプ<br>
     </div>
 
     <script>
@@ -576,7 +579,7 @@
 
             btn.onclick = () => { window.open(tweetUrl, '_blank'); };
 
-            // 絶対配置をやめ、オーバーレイの中に追加して綺麗に並べる
+            // オーバーレイの中に追加して綺麗に並べる
             document.getElementById('game-overlay').appendChild(btn);
         }
 
@@ -613,7 +616,9 @@
 
             let diffX = touchEndX - touchStartX;
             let diffY = touchEndY - touchStartY;
-            const threshold = 30; 
+
+            //タッチの閾値を低くするとより軽いタッチで反応する
+            const threshold = 15; 
 
             if (Math.abs(diffX) > Math.abs(diffY)) {
                 if (Math.abs(diffX) > threshold) {
@@ -629,8 +634,9 @@
         }, { passive: true });
 
         document.getElementById('grid-board').addEventListener('touchmove', (e) => {
-            if (gameActive) e.preventDefault();
-        }, { passive: false });
+            if (gameActive && e.cancelacle) {
+                e.preventDefault();
+        }}, { passive: false });
 
         window.onload = setupGame;
     </script>
