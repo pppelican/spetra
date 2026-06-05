@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -91,12 +90,11 @@
             border-radius: 8px; 
             display: none; 
             z-index: 100;
-            gap: 10px; /* 要素の間隔を均等に空ける */
+            gap: 10px; 
         }
-        /* 再挑戦ボタン */
         .btn-restart {
-            margin-top: 5px; /* 上に詰める */
-            padding: 8px 20px; /* サイズを一回り小さく */
+            margin-top: 5px; 
+            padding: 8px 20px; 
             font-size: 14px; 
             background-color: #ef4444;
             color: white; 
@@ -109,12 +107,26 @@
         }
         .btn-restart:hover { background-color: #dc2626; }
         
-        /* ステータス */
-        .status-container { display: flex; gap: 20px; margin-bottom: 20px; }
+        /* ステータス（1行に収まるようにリバランス） */
+        .status-container { 
+            display: flex; 
+            gap: 8px; 
+            margin-bottom: 20px; 
+            width: 100%;
+            max-width: 346px; /* 盤面の幅に合わせる */
+            justify-content: space-between;
+        }
         .status-box {
-            font-size: 20px; font-weight: bold; background: #fff;
-            padding: 8px 25px; border-radius: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            color: #0f172a; min-width: 120px; text-align: center;
+            font-size: 16px;
+            font-weight: bold; 
+            background: #fff;
+            padding: 6px 10px; /* 余白をコンパクトに */
+            border-radius: 12px; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            color: #0f172a; 
+            flex: 1; /* 均等な幅にする */
+            text-align: center;
+            white-space: nowrap; /* 改行防止 */
         }
         #time-box.hurry { color: #ef4444; background-color: #fee2e2; animation: blink 1s infinite; }
         @keyframes blink { 50% { opacity: 0.6; } }
@@ -179,7 +191,7 @@
             box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
             width: 100%; 
             margin-top: 0;
-            margin-bottom: 15px; /* テーブル上部に配置し、下に余白を設ける */
+            margin-bottom: 15px; 
         }
         .btn-start:hover { background-color: #0369a1; }
         
@@ -207,14 +219,15 @@
             <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
         </div>
         <div class="overlay" id="game-overlay">
-            <div style="margin-bottom: 5px;">GAME OVER</div>
+            <div style="margin-bottom: 5px;">✨FINISH!✨</div>
             <button class="btn-restart" onclick="setupGame()">再挑戦 (Space)</button>
-            </div>
+        </div>
     </div>
 
     <div class="status-container">
-        <div class="status-box">SCORE: <span id="score-val">0</span></div>
-        <div class="status-box" id="time-box">TIME: <span id="time-val">90</span>s</div>
+        <div class="status-box">SCORE <span id="score-val">0</span></div>
+        <div class="status-box" id="time-box">TIME <span id="time-val">90</span>s</div>
+        <div class="status-box">CNT <span id="merge-val">0</span></div>
     </div>
     
     <div class="setup-section">
@@ -262,6 +275,7 @@
 
         let board = Array.from({length: 4}, () => Array(4).fill(0));
         let score = 0;
+        let mergeCount = 0; // 合体回数のカウント変数
         let timeLeft = 90;
         let timerInterval = null;
         let tileIdCounter = 0; 
@@ -343,12 +357,14 @@
             document.getElementById('grid-board').querySelectorAll('.tile').forEach(el => el.remove());
             board = Array.from({length: 4}, () => Array(4).fill(0));
             score = 0;
+            mergeCount = 0; // リセット
             timeLeft = 90;
             tileIdCounter = 0;
             gameActive = true;
             timerStarted = false; 
 
             document.getElementById('score-val').textContent = score;
+            document.getElementById('merge-val').textContent = mergeCount;
             document.getElementById('time-val').textContent = timeLeft;
             document.getElementById('time-box').classList.remove('hurry');
             document.getElementById('game-overlay').style.display = 'none';
@@ -381,6 +397,7 @@
             let emptyCells = [];
             for (let r = 0; r < 4; r++) {
                 for (let c = 0; c < 4; c++) {
+                    // isDeletedSpace（直前に消えたマス）を除外して出現候補を選ぶ
                     if (board[r][c] === 0) emptyCells.push({r, c});
                 }
             }
@@ -412,7 +429,8 @@
             for (let r = 0; r < 4; r++) {
                 for (let c = 0; c < 4; c++) {
                     let tileData = board[r][c];
-                    if (tileData) {
+                    // isDeletedSpace オブジェクトを描画しようとしないようにガード
+                    if (tileData && !tileData.isDeletedSpace) {
                         let tileEl = existingTiles[tileData.id];
                         let targetTop = `${10 + r * 84}px`;
                         let targetLeft = `${10 + c * 84}px`;
@@ -463,13 +481,14 @@
                     
                     let matchVal = result[i].val;
                     score += SCORE_MAP[matchVal];
+                    mergeCount++; // 合体をカウント
 
                     if (matchVal === 6) {
                         timeLeft += 30; 
-                        result[i] = 0; 
+                        result[i] = "DELETED"; // 一旦「削除フラグ」として残す（奥まで滑るのを防ぐため）
                         result[i + 1] = 0;
                     } else if (matchVal === 11) {
-                        result[i] = 0;
+                        result[i] = "DELETED";
                         result[i + 1] = 0;
                     } else {
                         result[i].val += 1;
@@ -479,13 +498,16 @@
                 }
             }
             result = result.filter(item => item !== 0);
+            // "DELETED" を一時的な見えない壁オブジェクトに変換
+            result = result.map(item => item === "DELETED" ? { isDeletedSpace: true } : item);
             while (result.length < 4) result.push(0);
             return result;
         }
 
         function move(direction) {
             if (!gameActive) return;
-            let oldBoard = JSON.stringify(board.map(row => row.map(c => c ? c.val : 0)));
+            // 削除フラグを安全に無視して盤面の一致判定を行う
+            let oldBoard = JSON.stringify(board.map(row => row.map(c => (c && c.val) ? c.val : 0)));
 
             for(let r=0; r<4; r++) {
                 for(let c=0; c<4; c++) { if(board[r][c]) board[r][c].isMerged = false; }
@@ -515,15 +537,28 @@
                 }
             }
 
-            let newBoard = JSON.stringify(board.map(row => row.map(c => c ? c.val : 0)));
+            let newBoard = JSON.stringify(board.map(row => row.map(c => (c && c.val) ? c.val : 0)));
 
             if (oldBoard !== newBoard) {
                 if (!timerStarted) {
                     startTimer();
                 }
-                addTurnTile();
+                
+                // 新しいタイルを追加（消滅直後の跡地は回避される）
+                addTurnTile(); 
+                
+                // タイル追加後、次のターンのために消滅跡地を通常の空きマス(0)に戻す
+                for(let r=0; r<4; r++) {
+                    for(let c=0; c<4; c++) {
+                        if (board[r][c] && board[r][c].isDeletedSpace) {
+                            board[r][c] = 0;
+                        }
+                    }
+                }
+
                 renderBoard();
                 document.getElementById('score-val').textContent = score;
+                document.getElementById('merge-val').textContent = mergeCount;
                 document.getElementById('time-val').textContent = timeLeft;
                 checkGameOver();
             }
@@ -566,7 +601,6 @@
             btn.id = 'tweet-btn';
             btn.textContent = 'Xでポストする';
             
-            // 再挑戦ボタンとサイズ感を統一し、被りをなくす
             btn.style.padding = '8px 20px';
             btn.style.fontSize = '14px';
             btn.style.fontWeight = 'bold';
@@ -579,7 +613,6 @@
 
             btn.onclick = () => { window.open(tweetUrl, '_blank'); };
 
-            // オーバーレイの中に追加して綺麗に並べる
             document.getElementById('game-overlay').appendChild(btn);
         }
 
@@ -617,7 +650,7 @@
             let diffX = touchEndX - touchStartX;
             let diffY = touchEndY - touchStartY;
 
-            //タッチの閾値を低くするとより軽いタッチで反応する
+            //タッチ感度 数字が小さいほど弱いタッチで反応
             const threshold = 15; 
 
             if (Math.abs(diffX) > Math.abs(diffY)) {
@@ -634,7 +667,7 @@
         }, { passive: true });
 
         document.getElementById('grid-board').addEventListener('touchmove', (e) => {
-            if (gameActive && e.cancelacle) {
+            if (gameActive && e.cancelable) {
                 e.preventDefault();
         }}, { passive: false });
 
